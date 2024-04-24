@@ -1,15 +1,18 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post,UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
-import { Repository } from 'typeorm';
-import { User } from 'src/entities/User/User';
-import { InjectRepository } from '@nestjs/typeorm';
 import { UserDto } from 'src/dto/User/User.dto';
 import { LoginDto } from 'src/dto/User/Login.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AuthService } from 'src/auth/auth.service';
 @Controller('user')
 export class UserController {
-    constructor(private readonly userService:UserService) {}
+    constructor(
+        private readonly userService:UserService,
+        private readonly  authService:AuthService
+    ) {}
    
     @Get(":email")
+    @UseGuards(AuthGuard)
     async getUserByEmail(@Param('email') email:string){
         try {
             const user = await this.userService.getUserByEmail(email);
@@ -38,9 +41,13 @@ export class UserController {
         const newUser = await this.userService.createUser(user);
         if(newUser){
             return {
-                success:true,
-                data:newUser
-            }
+                success: true,
+                data: {
+                    firstName: newUser.firstName,
+                    lastName: newUser.lastName,
+                    email: newUser.email
+                }
+            };
         }
         if(newUser){
             return {
@@ -61,11 +68,12 @@ export class UserController {
     async login(@Body() loginDto:LoginDto){
        try {
         const loginUser = await this.userService.loginUser(loginDto);
-
-        if(loginUser){
+        if(loginUser.id){
+            const token = await this.authService.signIn({email:loginUser.email,id:loginUser.id});
             return{
                 success:true,
-                data:loginUser
+                data:loginUser,
+                token:token
             }
         }      
         return{
@@ -73,6 +81,7 @@ export class UserController {
             message:'Email or Password does not match!'
         }  
        } catch (error) {
+        console.log(error)
         return{
             success:false,
             message:error

@@ -56,8 +56,9 @@ export class UserService {
             const lastName = user.lastName;
             const email = user.email;
             const isActive = user.isActive
+            const id = user.id
             return  {
-                firstName,lastName,email,isActive
+                firstName,lastName,email,isActive,id
             } ; // Return user data without password
         }
     }
